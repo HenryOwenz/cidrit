@@ -149,9 +149,19 @@ class CidrInfo:
 
     def summarize_subnets(self, subnets: List[str]) -> str:
         try:
-            summarized = ipaddress.collapse_addresses([ipaddress.IPv4Network(cidr) for cidr in subnets])
-            result = [("Summarized CIDR Blocks", ""), ("Number of Summarized Blocks", str(len(list(summarized))))] + [(str(cidr), "") for cidr in summarized]
+            # Convert input subnets to IPv4Network objects and sort them
+            network_objects = sorted([ipaddress.IPv4Network(cidr) for cidr in subnets])
+            logger.debug(f"Sorted network objects: {network_objects}")
             
+            # Summarize contiguous subnets
+            summarized = list(ipaddress.collapse_addresses(network_objects))
+            logger.debug(f"Summarized CIDR blocks: {summarized}")
+            
+            # Prepare the result for output
+            result = [("Summarized CIDR Blocks", ""), ("Number of Summarized Blocks", str(len(summarized))), ("Subnet CIDR", "Number of IPs")]
+            result += [(str(cidr), str(cidr.num_addresses)) for cidr in summarized]
+            
+            # Format the output
             output = self._format_output(result)
             self.total_output += output
             return output
@@ -159,7 +169,7 @@ class CidrInfo:
             ErrorHandler.handle_ip_address_error(e, "Error during subnet summarization")
         except Exception as e:
             ErrorHandler.handle_exception(e, "Unexpected error during subnet summarization")
-    
+
     def range_to_cidr(self, start_ip: str, end_ip: str) -> str:
         try:
             start = ipaddress.IPv4Address(start_ip)
